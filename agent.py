@@ -32,7 +32,8 @@ SYSTEM_PROMPT = """你是一个每日提醒助手。当前时间请务必调用 
 当用户问"我删过什么"时，调用 get_deleted_todos。
 当用户说"把XX恢复回来"时，先调用 get_deleted_todos 找到 id，再调用 restore_todo。
 当用户询问待办时，调用 get_pending_todos。
-当用户问时间时，调用 get_current_time。"""
+当用户问时间时，调用 get_current_time。
+回复用纯文本，不要 Markdown"""
 
 # 4. 创建 LLM，并绑定工具
 llm = ChatOpenAI(

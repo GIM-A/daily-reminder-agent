@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>每日提醒 Agent</title>
+    <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+    <div class="container">
+        <h1>每日提醒 Agent</h1>
+
+        <!-- 登录/注册区域（未登录时显示） -->
+        <div id="auth-section">
+            <input id="username" type="text" placeholder="用户名" autocomplete="username">
+            <input id="password" type="password" placeholder="密码" autocomplete="current-password">
+            <input id="email" type="email" placeholder="邮箱（仅注册需要）" autocomplete="email">
+            <div class="button-group">
+                <button id="btn-login">登录</button>
+                <button id="btn-register">注册</button>
+            </div>
+            <p id="auth-message"></p>
+        </div>
+
+        <!-- 聊天区域（已登录时显示） -->
+        <div id="chat-section" style="display: none;">
+            <div id="messages"></div>
+            <div class="input-row">
+                <input id="chat-input" type="text" placeholder="说点什么...">
+                <button id="btn-send">发送</button>
+            </div>
+            <button id="btn-logout" class="logout">退出登录</button>
+        </div>
+    </div>
+    <script src="/static/app.js"></script>
+</body>
+</html>

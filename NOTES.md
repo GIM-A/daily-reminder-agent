@@ -210,6 +210,27 @@
 2. **`/docs` header 传不到后端** → curl 直测发现后端正常 → Swagger UI bug → 用 curl / requests 测
 3. **`/add` `/list` 接口报错** → 删掉，统一走 `/chat`
 
+## 阶段 7：前端两个页面（完成）
+
+**完成时间：** 2026-10-14
+
+### 完成内容
+- `static/index.html`：登录表单 + 聊天界面（用 display 切换）
+- `static/style.css`：卡片样式、消息气泡
+- `static/app.js`：fetch 调 API、localStorage 存 token
+- `main.py`：`app.mount("/static", StaticFiles(...))` + `/` 返回 index.html
+
+### 概念收获
+- **前后端分离**：前端只管展示，后端只管 API
+- **localStorage**：浏览器本地存储，持久保存 token
+- **fetch API**：JS 发 HTTP 请求，支持 `await`
+- **Bearer token**：`Authorization: Bearer <token>` header
+- **401 处理**：token 失效时清 localStorage 并切回登录页
+- **静态文件挂载**：FastAPI 的 `StaticFiles` + `FileResponse`
+
+### 问题日志
+- 无
+
 ## 阶段 8：部署阿里云 ECS（完成）
 
 **完成时间：** 2026-10-14

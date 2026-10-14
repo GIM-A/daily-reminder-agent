@@ -2,6 +2,8 @@ from dotenv import load_dotenv
 load_dotenv()
 
 from fastapi import FastAPI, Header, HTTPException
+from fastapi.staticfiles import StaticFiles
+from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from auth import (
     decode_access_token,
@@ -13,6 +15,7 @@ from database import get_user_by_username, create_user
 from agent import agent as agent_app
 
 app = FastAPI()
+app.mount("/static", StaticFiles(directory="static"), name="static")
 
 
 class ChatRequest(BaseModel):
@@ -32,7 +35,7 @@ class LoginRequest(BaseModel):
 
 @app.get("/")
 def index():
-    return {"message": "hello"}
+    return FileResponse("static/index.html")
 
 
 @app.get("/health")
