@@ -56,6 +56,51 @@ def list_todos() -> list:
         rows = c.fetchall()
         conn.close()
         return rows
+def complete_todo(todo_id: int) -> int:
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("UPDATE todos SET done = 1 WHERE id = %s AND done = 0", (todo_id,))
+    conn.commit()
+    affected = c.rowcount
+    conn.close()
+    return affected
+
+def delete_todo(todo_id: int) -> int:
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute(
+        "UPDATE todos SET deleted_at = NOW() WHERE id = %s AND deleted_at IS NULL",
+        (todo_id,)
+    )
+    conn.commit()
+    affected = c.rowcount
+    conn.close()
+    return affected
+
+def get_deleted_todos() -> list:
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("""
+        SELECT id, content, deadline, deleted_at
+        FROM todos
+        WHERE deleted_at IS NOT NULL
+          AND deleted_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
+    """)
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
+def restore_todo(todo_id: int) -> int:
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute(
+        "UPDATE todos SET deleted_at = NULL WHERE id = %s AND deleted_at IS NOT NULL",
+        (todo_id,)
+    )
+    conn.commit()
+    affected = c.rowcount
+    conn.close()
+    return affected
 
 if __name__ == "__main__":
     init_db()
