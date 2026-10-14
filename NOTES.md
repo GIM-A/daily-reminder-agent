@@ -213,7 +213,6 @@
 ## 阶段 7：前端两个页面（完成）
 
 **完成时间：** 2026-10-14
-
 ### 完成内容
 - `static/index.html`：登录表单 + 聊天界面（用 display 切换）
 - `static/style.css`：卡片样式、消息气泡
@@ -242,32 +241,27 @@
 - 部署路径：/root/daily-reminder-agent
 
 ### 完成内容
-- 装 MySQL、建库建表
-- 从 GitHub clone 代码
-- 建 .venv 装依赖（Python 3.10）
-- 配 .env（新密钥）
-- 配 Gunicorn（gunicorn_conf.py）
-- 两个 systemd 服务：
-  - reminder-web：Gunicorn + FastAPI
-  - reminder-cron：scheduler.py 独立进程
+- MySQL 8.0、Nginx 1.18、Python 3.10
+- Gunicorn + UvicornWorker（2 worker）
+- systemd 双服务：reminder-web、reminder-cron
 - Nginx 反向代理 80 → 8000
 - 公网访问成功
 
+### 问题日志
+1. **SQLAlchemy==2.1.4 装不上**（Python 3.10 不兼容）→ 去掉版本锁
+2. **requirements.txt 编码问题** → `cat > file << 'EOF'` 重写
+3. **8000 端口被旧 uvicorn 占用** → 发现旧 `reminder-agent.service` 在跑 → 停掉、disable、删除
+4. **`git pull` 因未跟踪文件中止** → `rm` 后重新 pull 或 `git reset --hard origin/main`
+5. **Nginx 配置冲突** → 删掉旧的 `reminder-agent` 配置
+6. **本地 push 后服务器 pull 失败** → 用 `git reset --hard origin/main` 强制同步
+
 ### 概念收获
 - **生产架构**：Nginx → Gunicorn → FastAPI
-- **scheduler 独立进程**：避免 Gunicorn 多 worker 导致重复执行
+- **scheduler 独立进程**：避免 Gunicorn 多 worker 重复执行
 - **systemd**：开机自启 + 崩溃自动重启
-- **Gunicorn + UvicornWorker**：生产级 ASGI 服务器
-- **systemd 服务**：`After`、`Wants`、`Restart=always`
-- **Nginx 反向代理**：`proxy_pass`、`proxy_set_header`
-
-### 问题日志
-1. **requirements.txt 在服务器上乱码** → `cat > file << 'EOF'` 重写
-2. **SQLAlchemy==2.1.4 装不上**（Python 3.10） → 去掉版本锁
-3. **SSH 密码不对** → 阿里云控制台重置密码
-
-
-
+- **systemd 服务清理**：stop → disable → rm → daemon-reload
+- **端口冲突排查**：`ss -tlnp | grep 端口`
+- **SSH 提示符区分环境**：`root@server` vs `PS D:\...`
 ## 阶段 9：定时任务（生产级）（完成）
 
 **完成时间：** 2026-10-14
@@ -290,9 +284,6 @@
 ## 待做阶段
 
 - ⏳ 阶段 6.5：邮箱验证 + 找回密码（QQ 邮箱）
-- ⏳ 阶段 7：前端两页面（登录 + 聊天）
-- ⏳ 阶段 8：部署阿里云 ECS
-- ⏳ 阶段 9：定时任务接入 FastAPI
 
 ---
 
