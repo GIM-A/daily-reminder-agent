@@ -5,6 +5,7 @@ load_dotenv()
 import os
 from fastapi import FastAPI
 from pydantic import BaseModel
+from database import add_todo, list_todos
 
 app = FastAPI()
 
@@ -25,8 +26,16 @@ def health():
 def chat(req: ChatRequest):
     return {"reply": f"你说的是：{req.message}"}
 
-import os
-
 @app.get("/debug-env")
 def debug_env():
     return {"key_loaded": bool(os.getenv("DASHSCOPE_API_KEY"))}
+
+@app.post("/add")
+def add(req: ChatRequest):
+    new_id = add_todo(req.message)
+    return {"id": new_id, "message": f"已添加待办：{req.message}"}
+
+@app.get("/list")
+def list_all():
+    todos = list_todos()
+    return {"count": len(todos), "todos": todos}
