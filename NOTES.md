@@ -242,6 +242,32 @@
 
 ## 阶段 6：用户表 + 登录接口（未开始）
 
+### 6.1 用户表 + 密码哈希（完成）
+
+**完成时间：** 2026-10-14
+
+#### 完成内容
+- MySQL 建 `users` 表（id / username / email / password_hash / created_at）
+- 装 `pwdlib` + `python-jose` + `python-multipart`
+- 写 `auth.py`：hash_password / verify_password / create_access_token / decode_access_token
+- 生成 `SECRET_KEY` 放进 `.env`
+
+#### 概念收获
+- 密码哈希用 `pwdlib`（比停更的 `passlib` 更现代）
+- `PasswordHash.recommended()` 默认 Argon2
+- JWT 用 `python-jose`，payload 里放 user_id + 过期时间
+- `SECRET_KEY` 用于签名，泄露可被伪造 token
+
+#### 问题日志
+1. **`passlib` + `bcrypt` 版本不兼容**
+   - 原因：passlib 停更，新版 bcrypt 改了 API
+   - 解决：改用 `pwdlib`
+2. **用错了 Python（系统 Python 而不是 .venv）**
+   - 现象：pip list 有 pwdlib，但 python auth.py 报 ModuleNotFoundError
+   - 解决：激活 .venv 或用 `.venv\Scripts\python.exe`
+3. **`from pwdlib import PasswordHashxt` 笔误**
+   - 解决：改成 `PasswordHash`
+
 ## 阶段 6.5：邮箱验证 + 找回密码（QQ 邮箱发信）（未开始）
 
 ## 阶段 7：todos 加 user_id，多人数据隔离（未开始）
@@ -306,3 +332,77 @@
 - ⏳ 阶段 8：前端两页面
 - 🔄 阶段 9：Git + GitHub
 - ⏳ 阶段 10：部署阿里云 ECS
+
+
+为什么密码用哈希：
+
+不可逆：数据库泄露了，攻击者也无法反推出明文密码
+
+即使管理员也看不到用户密码
+
+验证方式：不是「解密后对比」，而是「用同样的算法再哈希一次，对比两个哈希值是否匹配」
+
+「输入不同的明文都能验证成功」是错的——输入不同的明文，验证一定失败。verify_password("wrong", hash) 返回的就是 False。
+
+第 2 题：为什么同一密码哈希结果不同，还能验证？
+你说：「因为转换为哈希符合认证答案」
+
+没说清。 这是哈希最巧妙的地方，值得搞懂。
+
+关键概念：Salt（盐）
+
+hash_password("test123") 每次结果都不同，是因为每次哈希时会随机生成一段字符串（salt），混进密码里一起哈希。
+
+例如：
+
+text
+第 1 次：hash("test123" + "salt_A") → "$argon2id$...AAA"
+第 2 次：hash("test123" + "salt_B") → "$argon2id$...BBB"
+结果不同，但哈希结果里包含了 salt。验证时：
+
+从存储的哈希里取出 salt
+
+用同样的 salt + 用户输入的密码，再哈希一次
+
+对比两个哈希是否一致
+
+这就是为什么 verify_password 能成功——它不需要「解密」，只需要「用同样的 salt 再算一遍」。
+
+Salt 的作用：防止「彩虹表攻击」——如果没 salt，同样的密码永远产生同样的哈希，攻击者可以用预计算表反查。
+
+第 3 题：SECRET_KEY 干嘛用的？
+你说：「用户密码泄露会导致用户资料泄露」
+
+正确理解：
+
+SECRET_KEY 用于 JWT 的签名（sign）。
+
+JWT 的结构：
+
+text
+header.payload.signature
+header：说明算法（HS256）
+
+payload：放 user_id、过期时间（明文，只是 base64 编码，不算加密）
+
+signature：用 SECRET_KEY 对 header.payload 做 HMAC 计算出来的签名
+
+验证 token 时：
+
+拿到 token
+
+用 SECRET_KEY 重新算一遍签名
+
+对比 token 里的签名是否一致
+
+一致 → token 合法；不一致 → 被篡改过
+
+SECRET_KEY 泄露会怎样：
+
+攻击者能用你的 SECRET_KEY 伪造任意用户的 token
+
+例如伪造 {"sub": "1"}，就能冒充 id=1 的用户登录
+
+后果比密码泄露更严重
+
+所以 SECRET_KEY 必须放在 .env，绝不进 Git。
