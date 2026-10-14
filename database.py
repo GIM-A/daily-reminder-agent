@@ -137,5 +137,14 @@ def create_user(username: str, email: str, password_hash: str) -> int:
     conn.close()
     return new_id
 
+def get_all_users() -> list:
+    """返回所有用户，包含 id 和 email。"""
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("SELECT id, username, email FROM users")
+    rows = c.fetchall()
+    conn.close()
+    return rows
+
 if __name__ == "__main__":
     init_db()
