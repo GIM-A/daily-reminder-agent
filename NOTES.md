@@ -210,6 +210,42 @@
 2. **`/docs` header 传不到后端** → curl 直测发现后端正常 → Swagger UI bug → 用 curl / requests 测
 3. **`/add` `/list` 接口报错** → 删掉，统一走 `/chat`
 
+## 阶段 8：部署阿里云 ECS（完成）
+
+**完成时间：** 2026-10-14
+
+### 服务器信息
+- 系统：Ubuntu 22.04.5 LTS
+- 配置：2 核 2 GB
+- 公网 IP：8.149.236.20
+- 部署路径：/root/daily-reminder-agent
+
+### 完成内容
+- 装 MySQL、建库建表
+- 从 GitHub clone 代码
+- 建 .venv 装依赖（Python 3.10）
+- 配 .env（新密钥）
+- 配 Gunicorn（gunicorn_conf.py）
+- 两个 systemd 服务：
+  - reminder-web：Gunicorn + FastAPI
+  - reminder-cron：scheduler.py 独立进程
+- Nginx 反向代理 80 → 8000
+- 公网访问成功
+
+### 概念收获
+- **生产架构**：Nginx → Gunicorn → FastAPI
+- **scheduler 独立进程**：避免 Gunicorn 多 worker 导致重复执行
+- **systemd**：开机自启 + 崩溃自动重启
+- **Gunicorn + UvicornWorker**：生产级 ASGI 服务器
+- **systemd 服务**：`After`、`Wants`、`Restart=always`
+- **Nginx 反向代理**：`proxy_pass`、`proxy_set_header`
+
+### 问题日志
+1. **requirements.txt 在服务器上乱码** → `cat > file << 'EOF'` 重写
+2. **SQLAlchemy==2.1.4 装不上**（Python 3.10） → 去掉版本锁
+3. **SSH 密码不对** → 阿里云控制台重置密码
+
+
 
 ## 阶段 9：定时任务（生产级）（完成）
 
