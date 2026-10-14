@@ -35,67 +35,81 @@ def init_db():
     conn.close()
     print("数据库初始化完成")
 
-def add_todo(content: str, deadline: str = None) -> int:
-        conn = get_connection()
-        c = conn.cursor()
-        c.execute(
-            "INSERT INTO todos (content, deadline) VALUES (%s, %s)",
-            (content, deadline)
-        )
-        conn.commit()
-        new_id = c.lastrowid
-        conn.close()
-        return new_id
-
-def list_todos() -> list:
-        conn = get_connection()
-        c = conn.cursor()
-        c.execute(
-            "SELECT id, content, deadline, done FROM todos WHERE done = 0 AND deleted_at IS NULL"
-        )
-        rows = c.fetchall()
-        conn.close()
-        return rows
-def complete_todo(todo_id: int) -> int:
-    conn = get_connection()
-    c = conn.cursor()
-    c.execute("UPDATE todos SET done = 1 WHERE id = %s AND done = 0", (todo_id,))
-    conn.commit()
-    affected = c.rowcount
-    conn.close()
-    return affected
-
-def delete_todo(todo_id: int) -> int:
+def add_todo(user_id: int, content: str, deadline: str = None) -> int:
     conn = get_connection()
     c = conn.cursor()
     c.execute(
-        "UPDATE todos SET deleted_at = NOW() WHERE id = %s AND deleted_at IS NULL",
-        (todo_id,)
+        "INSERT INTO todos (user_id, content, deadline) VALUES (%s, %s, %s)",
+        (user_id, content, deadline)
+    )
+    conn.commit()
+    new_id = c.lastrowid
+    conn.close()
+    return new_id
+
+
+def list_todos(user_id: int) -> list:
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute(
+        "SELECT id, content, deadline, done FROM todos "
+        "WHERE user_id = %s AND done = 0 AND deleted_at IS NULL",
+        (user_id,)
+    )
+    rows = c.fetchall()
+    conn.close()
+    return list(rows)
+
+
+def complete_todo(user_id: int, todo_id: int) -> int:
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute(
+        "UPDATE todos SET done = 1 WHERE id = %s AND user_id = %s AND done = 0",
+        (todo_id, user_id)
     )
     conn.commit()
     affected = c.rowcount
     conn.close()
     return affected
 
-def get_deleted_todos() -> list:
+
+def delete_todo(user_id: int, todo_id: int) -> int:
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute(
+        "UPDATE todos SET deleted_at = NOW() "
+        "WHERE id = %s AND user_id = %s AND deleted_at IS NULL",
+        (todo_id, user_id)
+    )
+    conn.commit()
+    affected = c.rowcount
+    conn.close()
+    return affected
+
+
+def get_deleted_todos(user_id: int) -> list:
     conn = get_connection()
     c = conn.cursor()
     c.execute("""
         SELECT id, content, deadline, deleted_at
         FROM todos
-        WHERE deleted_at IS NOT NULL
+        WHERE user_id = %s
+          AND deleted_at IS NOT NULL
           AND deleted_at >= DATE_SUB(NOW(), INTERVAL 7 DAY)
-    """)
+    """, (user_id,))
     rows = c.fetchall()
     conn.close()
     return rows
 
-def restore_todo(todo_id: int) -> int:
+
+def restore_todo(user_id: int, todo_id: int) -> int:
     conn = get_connection()
     c = conn.cursor()
     c.execute(
-        "UPDATE todos SET deleted_at = NULL WHERE id = %s AND deleted_at IS NOT NULL",
-        (todo_id,)
+        "UPDATE todos SET deleted_at = NULL "
+        "WHERE id = %s AND user_id = %s AND deleted_at IS NOT NULL",
+        (todo_id, user_id)
     )
     conn.commit()
     affected = c.rowcount
@@ -109,6 +123,7 @@ def get_user_by_username(username: str):
     row = c.fetchone()
     conn.close()
     return row
+
 
 def create_user(username: str, email: str, password_hash: str) -> int:
     conn = get_connection()

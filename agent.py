@@ -55,7 +55,10 @@ def should_continue(state: MessagesState):
     return END
 
 # 7. 组装图
-graph = StateGraph(MessagesState)
+class AgentState(MessagesState):
+    user_id: int
+
+graph = StateGraph(AgentState)
 graph.add_node("agent", call_model)
 graph.add_node("tools", tool_node)
 graph.add_edge(START, "agent")
@@ -67,7 +70,10 @@ agent = graph.compile()
 
 # 9. 本地测试
 if __name__ == "__main__":
-    result = app.invoke({"messages": [("user", "帮我记一下，明天下午3点交作业")]})
+    result = agent.invoke({
+        "messages": [("user", "我有什么待办？")],
+        "user_id": 52,
+    })
     print(result["messages"][-1].content)
     print("\n--- 完整消息历史 ---")
     for msg in result["messages"]:

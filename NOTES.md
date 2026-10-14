@@ -240,7 +240,6 @@
 
 ## 阶段 5：定时任务 + 邮件（未开始）
 
-## 阶段 6：用户表 + 登录接口（未开始）
 
 ### 6.1 用户表 + 密码哈希（完成）
 
@@ -287,6 +286,51 @@
 
 #### 问题日志
 - 无
+- ### 6.3.1 数据库层加 user_id（完成）
+
+**完成时间：** 2026-10-14
+
+#### 完成内容
+- `database.py` 里 7 个待办相关函数全部加 `user_id` 参数
+- 每个 SQL 的 `WHERE` 都加 `user_id = %s`
+
+#### 概念收获
+- **数据隔离的核心**：每个数据库操作都带 user_id，不信任应用层
+- pymysql 无结果时 `fetchall()` 返回空元组 `()`，不是空列表 `[]`
+
+#### 问题日志
+- 无
+
+
+### 6.3 多用户数据隔离（完成）
+
+**完成时间：** 2026-10-14
+
+#### 完成内容
+- `database.py` 所有待办函数加 `user_id` 参数
+- `tools.py` 用 `InjectedState` 自动获取 user_id
+- `agent.py` 自定义 `AgentState`（继承 MessagesState + user_id）
+- `main.py` 的 `/chat` 从 `Authorization: Bearer <token>` 解析 user_id
+
+#### 概念收获
+- **数据隔离必须在数据库层做**：每个 SQL 都带 `WHERE user_id = %s`
+- **InjectedState**：LangGraph 自动从 state 注入参数，LLM 看不到
+- **JWT 结构**：`header.payload.signature`，三段用点分隔
+- **401 未认证**：HTTP 标准，表示没带 token 或 token 无效
+- **Swagger UI bug**：无 body 的接口，header 输入框有时不生效
+
+#### 问题日志
+1. **`InjectedState` 导入路径变了**
+   - 原因：新版 LangGraph 把 `InjectedState` 移到 `langgraph.prebuilt`
+   - 解决：`from langgraph.prebuilt import InjectedState`
+2. **`/docs` 里 header 一直传不到后端**
+   - 现象：`/debug-header` 返回 `received: null`
+   - 排查：用 curl 直接发，发现后端完全正常
+   - 结论：**Swagger UI 的 bug，不是后端问题**
+   - 解决：用 curl 或 Python requests 测试
+3. **`/add` 和 `/list` 接口会报错**
+   - 原因：`add_todo` / `list_todos` 需要 user_id 参数，旧接口没传
+   - 解决：删掉这两个接口，统一走 `/chat`
 ## 阶段 6.5：邮箱验证 + 找回密码（QQ 邮箱发信）（未开始）
 
 ## 阶段 7：todos 加 user_id，多人数据隔离（未开始）
