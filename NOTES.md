@@ -268,6 +268,25 @@
 3. **`from pwdlib import PasswordHashxt` 笔误**
    - 解决：改成 `PasswordHash`
 
+
+### 6.2 注册 / 登录接口（完成）
+
+**完成时间：** 2026-10-14
+
+#### 完成内容
+- `database.py` 加 `get_user_by_username` / `create_user`
+- `main.py` 加 `POST /register` 和 `POST /login`
+- 用 Pydantic 定义 `RegisterRequest` / `LoginRequest`
+- 注册：查重 → 哈希 → 入库
+- 登录：查用户 → 验证密码 → 生成 JWT
+
+#### 概念收获
+- **分层设计**：database.py 只操作数据库，auth.py 只做哈希，main.py 组织流程
+- **用户名枚举漏洞**：登录失败时统一返回「用户名或密码错误」，不让攻击者区分
+- **JWT 签发**：登录成功后返回 token，前端保存，后续请求带上
+
+#### 问题日志
+- 无
 ## 阶段 6.5：邮箱验证 + 找回密码（QQ 邮箱发信）（未开始）
 
 ## 阶段 7：todos 加 user_id，多人数据隔离（未开始）

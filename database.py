@@ -102,5 +102,25 @@ def restore_todo(todo_id: int) -> int:
     conn.close()
     return affected
 
+def get_user_by_username(username: str):
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("SELECT id, username, email, password_hash FROM users WHERE username = %s", (username,))
+    row = c.fetchone()
+    conn.close()
+    return row
+
+def create_user(username: str, email: str, password_hash: str) -> int:
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute(
+        "INSERT INTO users (username, email, password_hash) VALUES (%s, %s, %s)",
+        (username, email, password_hash)
+    )
+    conn.commit()
+    new_id = c.lastrowid
+    conn.close()
+    return new_id
+
 if __name__ == "__main__":
     init_db()
