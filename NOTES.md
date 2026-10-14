@@ -199,6 +199,26 @@
 - `.invoke({})` 是 LangChain Tool 对象的统一调用入口
 - `c.rowcount` 判断 UPDATE 是否命中目标行
 - 软删除：不真删数据，用 `deleted_at` 字段标记，7 天内可恢复
+### 4.4 用 LangGraph 组装 Agent（完成）
+
+**完成时间：** 2026-10-14
+
+#### 完成内容
+- 写 `agent.py`，用 StateGraph 组装 LLM + 7 个工具
+- 实现 should_continue 条件边
+- 实现 tools → agent 的循环
+- 测试「现在几点」→ LLM 自动调 get_current_time
+
+#### 概念收获
+- State（MessagesState）：整个对话历史的列表
+- Node：函数节点（call_model、tool_node）
+- Edge：固定边（tools → agent）和条件边（agent → tools/END）
+- Agent 是一个循环：LLM → 工具 → LLM → …直到 LLM 不再调工具
+- `.bind_tools(tools)` 让 LLM 知道有哪些工具可用
+
+#### 问题日志
+- 无（这次跑得顺利）
+
 ---
 
 ## 阶段 5：定时任务 + 邮件（未开始）
