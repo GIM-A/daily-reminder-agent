@@ -6,6 +6,7 @@ import os
 from fastapi import FastAPI
 from pydantic import BaseModel
 from database import add_todo, list_todos
+from agent import agent as agent_app
 
 app = FastAPI()
 
@@ -24,7 +25,9 @@ def health():
 
 @app.post("/chat")
 def chat(req: ChatRequest):
-    return {"reply": f"你说的是：{req.message}"}
+    result = agent_app.invoke({"messages": [("user", req.message)]})
+    reply = result["messages"][-1].content
+    return {"reply": reply}
 
 @app.get("/debug-env")
 def debug_env():

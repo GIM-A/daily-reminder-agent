@@ -63,7 +63,7 @@ graph.add_conditional_edges("agent", should_continue, {"tools": "tools", END: EN
 graph.add_edge("tools", "agent")
 
 # 8. 编译
-app = graph.compile()
+agent = graph.compile()
 
 # 9. 本地测试
 if __name__ == "__main__":

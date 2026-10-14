@@ -216,6 +216,23 @@
 - Agent 是一个循环：LLM → 工具 → LLM → …直到 LLM 不再调工具
 - `.bind_tools(tools)` 让 LLM 知道有哪些工具可用
 
+### 4.5 接入 FastAPI（完成）
+
+**完成时间：** 2026-10-14
+
+#### 完成内容
+- `agent.py`：`app = graph.compile()` 改成 `agent = graph.compile()`
+- `main.py`：`from agent import agent as agent_app`
+- `/chat` 接口改为调用 Agent，返回 `result["messages"][-1].content`
+
+#### 概念收获
+- 命名冲突：`agent.py` 和 `main.py` 里都有 `app` 变量，import 时要小心
+- 用 `as` 起别名避免冲突，同时让语义更清楚
+- Agent 返回的是完整消息列表，`[-1]` 取最终回复
+
+#### 问题日志
+- 无
+
 #### 问题日志
 - 无（这次跑得顺利）
 
