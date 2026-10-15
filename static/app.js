@@ -10,17 +10,18 @@ const emailInput = document.getElementById("email");
 const btnLogin = document.getElementById("btn-login");
 const btnRegister = document.getElementById("btn-register");
 const btnLogout = document.getElementById("btn-logout");
+const btnDeleteAccount = document.getElementById("btn-delete-account");
 const btnSend = document.getElementById("btn-send");
 const chatInput = document.getElementById("chat-input");
 const messagesEl = document.getElementById("messages");
 const authMessage = document.getElementById("auth-message");
-const verifyBanner = document.getElementById("verify-banner");
-const btnSendVerify = document.getElementById("btn-send-verify");
 const btnForgot = document.getElementById("btn-forgot");
 const btnBackLogin = document.getElementById("btn-back-login");
 const btnSendReset = document.getElementById("btn-send-reset");
 const forgotEmail = document.getElementById("forgot-email");
 const forgotMessage = document.getElementById("forgot-message");
+const verifyBanner = document.getElementById("verify-banner");
+const btnSendVerify = document.getElementById("btn-send-verify");
 
 // ==================== 工具函数 ====================
 function showAuthMessage(text, type = "") {
@@ -62,6 +63,24 @@ function getToken() {
 function refreshVerifyBanner() {
     const verified = localStorage.getItem("email_verified") === "true";
     verifyBanner.style.display = verified ? "none" : "block";
+}
+
+async function refreshUserStatus() {
+    const token = getToken();
+    if (!token) return;
+
+    try {
+        const res = await fetch("/me", {
+            headers: { "Authorization": "Bearer " + token },
+        });
+        if (res.status === 401) return;
+
+        const data = await res.json();
+        localStorage.setItem("email_verified", data.email_verified ? "true" : "false");
+        refreshVerifyBanner();
+    } catch (e) {
+        // 忽略
+    }
 }
 
 // ==================== 登录 ====================
@@ -111,6 +130,12 @@ btnRegister.addEventListener("click", async () => {
         return;
     }
 
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        showAuthMessage("邮箱格式不正确", "error");
+        return;
+    }
+
     showAuthMessage("注册中...");
 
     try {
@@ -126,7 +151,11 @@ btnRegister.addEventListener("click", async () => {
             return;
         }
 
-        showAuthMessage("注册成功！现在可以登录了。", "success");
+        if (data.warning) {
+            showAuthMessage(data.warning, "error");
+        } else {
+            showAuthMessage("注册成功！验证邮件已发送，请去邮箱查收并点击链接验证。", "success");
+        }
     } catch (e) {
         showAuthMessage("网络错误：" + e.message, "error");
     }
@@ -139,6 +168,48 @@ btnLogout.addEventListener("click", () => {
     localStorage.removeItem("email_verified");
     showAuth();
     showAuthMessage("已退出登录");
+});
+
+// ==================== 注销账号 ====================
+btnDeleteAccount.addEventListener("click", async () => {
+    const ok = confirm("确定要注销账号吗？所有数据将被永久删除，无法恢复！");
+    if (!ok) return;
+
+    const password = prompt("请输入密码以确认注销：");
+    if (!password) return;
+
+    const token = getToken();
+    if (!token) {
+        alert("登录状态已失效，请重新登录");
+        showAuth();
+        return;
+    }
+
+    try {
+        const res = await fetch("/delete-account", {
+            method: "POST",
+            headers: {
+                "Content-Type": "application/json",
+                "Authorization": "Bearer " + token,
+            },
+            body: JSON.stringify({ password }),
+        });
+        const data = await res.json();
+
+        if (data.error) {
+            alert(data.error);
+            return;
+        }
+
+        alert(data.message || "账号已注销");
+        localStorage.removeItem("token");
+        localStorage.removeItem("email");
+        localStorage.removeItem("email_verified");
+        showAuth();
+        showAuthMessage("账号已注销");
+    } catch (e) {
+        alert("网络错误：" + e.message);
+    }
 });
 
 // ==================== 忘记密码 ====================
@@ -244,6 +315,13 @@ btnSend.addEventListener("click", async () => {
             return;
         }
 
+        if (res.status === 403) {
+            messagesEl.removeChild(messagesEl.lastChild);
+            appendMessage("bot", "⚠️ 请先验证邮箱才能使用聊天功能");
+            verifyBanner.style.display = "block";
+            return;
+        }
+
         const data = await res.json();
         messagesEl.removeChild(messagesEl.lastChild);
         appendMessage("bot", data.reply || "（无回复）");
@@ -268,6 +346,7 @@ function appendMessage(role, text) {
 // ==================== 启动时检查登录状态 ====================
 if (getToken()) {
     showChat();
+    refreshUserStatus();
 } else {
     showAuth();
 }

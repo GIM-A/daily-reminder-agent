@@ -23,7 +23,6 @@ def init_db():
     conn = get_connection()
     c = conn.cursor()
 
-    # todos 表
     c.execute("""
         CREATE TABLE IF NOT EXISTS todos (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -36,7 +35,6 @@ def init_db():
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     """)
 
-    # email_verifications 表
     c.execute("""
         CREATE TABLE IF NOT EXISTS email_verifications (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -153,7 +151,22 @@ def get_user_by_username(username: str):
 def get_user_by_email(email: str):
     conn = get_connection()
     c = conn.cursor()
-    c.execute("SELECT id, username, email, password_hash, email_verified FROM users WHERE email = %s", (email,))
+    c.execute(
+        "SELECT id, username, email, password_hash, email_verified FROM users WHERE email = %s",
+        (email,)
+    )
+    row = c.fetchone()
+    conn.close()
+    return row
+
+
+def get_user_by_id(user_id: int):
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute(
+        "SELECT id, username, email, password_hash, email_verified FROM users WHERE id = %s",
+        (user_id,)
+    )
     row = c.fetchone()
     conn.close()
     return row
@@ -173,7 +186,6 @@ def create_user(username: str, email: str, password_hash: str) -> int:
 
 
 def get_all_users() -> list:
-    """返回所有用户，包含 id 和 email。"""
     conn = get_connection()
     c = conn.cursor()
     c.execute("SELECT id, username, email FROM users")
@@ -216,8 +228,21 @@ def mark_token_used(token_id: int) -> int:
     conn.close()
     return affected
 
+
+def update_email_verified(user_id: int) -> int:
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute(
+        "UPDATE users SET email_verified = 1 WHERE id = %s",
+        (user_id,)
+    )
+    conn.commit()
+    affected = c.rowcount
+    conn.close()
+    return affected
+
+
 def update_user_password(user_id: int, new_password_hash: str) -> int:
-    """更新用户密码，返回受影响行数。"""
     conn = get_connection()
     c = conn.cursor()
     c.execute(
@@ -230,17 +255,21 @@ def update_user_password(user_id: int, new_password_hash: str) -> int:
     return affected
 
 
-def update_email_verified(user_id: int) -> int:
-    """把用户的 email_verified 设为 1，返回受影响行数。"""
+def delete_user(user_id: int) -> int:
+    """硬删除用户及其所有关联数据（todos、email_verifications）。"""
     conn = get_connection()
     c = conn.cursor()
-    c.execute(
-        "UPDATE users SET email_verified = 1 WHERE id = %s",
-        (user_id,)
-    )
-    conn.commit()
-    affected = c.rowcount
-    conn.close()
+    try:
+        c.execute("DELETE FROM todos WHERE user_id = %s", (user_id,))
+        c.execute("DELETE FROM email_verifications WHERE user_id = %s", (user_id,))
+        c.execute("DELETE FROM users WHERE id = %s", (user_id,))
+        conn.commit()
+        affected = c.rowcount
+    except Exception:
+        conn.rollback()
+        raise
+    finally:
+        conn.close()
     return affected
 
 

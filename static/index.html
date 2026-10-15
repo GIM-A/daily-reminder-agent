@@ -39,14 +39,17 @@
         <!-- 聊天区域 -->
         <div id="chat-section" style="display: none;">
             <div id="verify-banner" style="display: none;">
-                ⚠️ 您的邮箱未验证，<a href="#" id="btn-send-verify">点此发送验证邮件</a>
+                ⚠️ 请先验证邮箱才能使用聊天功能，<a href="#" id="btn-send-verify">点此发送验证邮件</a>
             </div>
             <div id="messages"></div>
             <div class="input-row">
                 <input id="chat-input" type="text" placeholder="说点什么...">
                 <button id="btn-send">发送</button>
             </div>
-            <button id="btn-logout" class="logout">退出登录</button>
+            <div class="button-group" style="margin-top: 12px;">
+                <button id="btn-logout" class="logout">退出登录</button>
+                <button id="btn-delete-account" style="background: #d33;">注销账号</button>
+            </div>
         </div>
     </div>
     <script src="/static/app.js"></script>
