@@ -210,9 +210,54 @@
 2. **`/docs` header 传不到后端** → curl 直测发现后端正常 → Swagger UI bug → 用 curl / requests 测
 3. **`/add` `/list` 接口报错** → 删掉，统一走 `/chat`
 
+---
+
+## 阶段 6.5：邮箱验证 + 找回密码（完成）
+
+**完成时间：** 2026-10-15
+
+### 完成内容
+- `email_verifications` 表：token、purpose、expires_at、used_at
+- `users` 表加 `email_verified` 字段
+- `auth.py`：`generate_token()`（secrets.token_urlsafe）
+- `notifier.py`：`send_verify_email` / `send_reset_password_email`
+- `database.py`：5 个新函数
+  - `create_verification_token`
+  - `get_verification_token`
+  - `mark_token_used`
+  - `update_email_verified`
+  - `update_user_password`
+- `main.py`：6 个新接口
+  - `POST /send-verify-email` — 请求发验证邮件
+  - `POST /verify-email` — JSON 形式提交 token
+  - `GET /verify` — 点邮件链接直接验证
+  - `POST /forgot-password` — 请求发重置密码邮件
+  - `GET /reset-password` — 返回重置密码表单
+  - `POST /reset-password` — 提交新密码
+
+### 概念收获
+- **邮箱验证 vs 找回密码**：复用同一张 token 表，`purpose` 区分
+- **随机 token vs JWT**：验证类 token 需要「存库、可作废、一次性」，所以用随机字符串，不用 JWT
+- **一次性 token**：`used_at` 标记，用过即失效
+- **邮箱枚举防护**：`/forgot-password` 即使用户不存在也返回同样提示
+- **FastAPI 表单处理**：`Form(...)` vs `BaseModel`（JSON）
+- **有效期权衡**：邮箱验证 15 分钟，找回密码 1 小时（体验 vs 安全）
+- **分层复用**：`send_verify_email` 和 `send_reset_password_email` 都调 `send_email`，不重写 SMTP
+
+### 问题日志
+1. **`get_user_by_email` 重复定义** → 后定义的覆盖前一个，导致 `email_verified` 字段丢失 → 删掉旧定义
+2. **`get_user_by_username` 被误删** → ImportError → 补回
+3. **终端命令粘进代码** → SyntaxError → 拆行
+4. **`/register` 未检查邮箱重复** → 数据库 UNIQUE 约束报 1062 → 加 `get_user_by_email` 检查
+5. **Windows PowerShell 的 `curl` 别名坑** → 用 `curl.exe` 或 Python requests
+6. **`add_todo` 的 `c.lastrowid` 顺序** → 必须在 `conn.close()` 前取值
+
+---
+
 ## 阶段 7：前端两个页面（完成）
 
 **完成时间：** 2026-10-14
+
 ### 完成内容
 - `static/index.html`：登录表单 + 聊天界面（用 display 切换）
 - `static/style.css`：卡片样式、消息气泡
@@ -229,6 +274,8 @@
 
 ### 问题日志
 - 无
+
+---
 
 ## 阶段 8：部署阿里云 ECS（完成）
 
@@ -262,6 +309,9 @@
 - **systemd 服务清理**：stop → disable → rm → daemon-reload
 - **端口冲突排查**：`ss -tlnp | grep 端口`
 - **SSH 提示符区分环境**：`root@server` vs `PS D:\...`
+
+---
+
 ## 阶段 9：定时任务（生产级）（完成）
 
 **完成时间：** 2026-10-14
@@ -279,11 +329,12 @@
 
 ### 问题日志
 - 无
+
 ---
 
 ## 待做阶段
 
-- ⏳ 阶段 6.5：邮箱验证 + 找回密码（QQ 邮箱）
+（无，阶段 0~9 + 6.5 全部完成）
 
 ---
 
@@ -304,6 +355,11 @@
 | 6.1 | pip 报 ProxyError | 代理干扰 PyPI | 用清华镜像 |
 | 6.3 | InjectedState 导入路径变了 | 新版本移到 langgraph.prebuilt | 改 import |
 | 6.3 | /docs header 传不到 | Swagger UI bug | 用 curl / requests 测 |
+| 6.5 | get_user_by_email 重复定义 | 后覆盖前 | 删掉旧定义 |
+| 6.5 | get_user_by_username 被误删 | 编辑时多选了 | 补回函数 |
+| 6.5 | 终端命令粘进代码 | 光标位置不对 | 拆行 |
+| 6.5 | /register 未检查邮箱重复 | 只查了用户名 | 加 get_user_by_email 检查 |
+| 6.5 | add_todo 的 lastrowid 位置 | 在 close() 后取值 | 先取值再 close |
 
 ---
 
@@ -311,6 +367,7 @@
 
 - **FastAPI**：`@app.get/post` 装饰器定义路由，`/docs` 自动生成文档
 - **Pydantic `BaseModel`**：定义请求体结构，自动校验
+- **FastAPI `Form`**：处理 HTML 表单提交（`form-data`），区别于 `BaseModel`（JSON）
 - **`.env`**：敏感信息不进代码、不进 Git
 - **pymysql**：`DictCursor` 用列名取值；增删改要 `commit()`；`%s` 防注入
 - **`@tool` 装饰器**：把函数变成 LLM 可调用的工具；docstring 决定调用时机
@@ -320,6 +377,7 @@
 - **`InjectedState`**：自动从 state 注入参数，LLM 看不到
 - **JWT**：`header.payload.signature`，`SECRET_KEY` 签名
 - **哈希 vs 加密**：密码用哈希（不可逆），Salt 防彩虹表
+- **随机 token vs JWT**：需要「可作废、一次性、存库」的场景用随机 token
 
 ---
 
@@ -341,15 +399,13 @@
 - ✅ 阶段 4：接大模型 + LangGraph
 - ✅ 阶段 5：定时任务 + 邮件
 - ✅ 阶段 6：用户表 + 登录接口（含多用户隔离）
-- ⏳ 阶段 6.5：邮箱验证 + 找回密码
-- ✅阶段 7：前端两页面
+- ✅ 阶段 6.5：邮箱验证 + 找回密码
+- ✅ 阶段 7：前端两页面
 - ✅ 阶段 8：部署阿里云 ECS
 - ✅ 阶段 9：定时任务接入 FastAPI
 
 
----
-
-# 📚 附录：阶段 3~8 问答回顾
+# 📚 附录：问答回顾
 
 > 记录学习过程中提过的问题、我的回答、正确与否。方便复习和查漏补缺。
 
@@ -357,9 +413,9 @@
 
 | 判定 | 数量 |
 |------|------|
-| ✅ 完全正确 | 11 |
-| ⚠️ 部分正确/需纠正 | 13 |
-| ❌ 错误 | 10 |
+| ✅ 完全正确 | 12 |
+| ⚠️ 部分正确/需纠正 | 17 |
+| ❌ 错误 | 15 |
 
 ---
 
@@ -569,9 +625,55 @@
 
 ---
 
-## 阶段 6：多用户 + JWT
+## 阶段 5：定时任务
 
-### Q23：为什么密码要「哈希」而不是「加密」？
+### Q23：为什么邮件授权码要放 `.env` 而不是写代码里？
+
+**我的回答：** 防止授权码泄露
+
+**纠正：** ⚠️ 对，但不完整。
+
+- 还有三个理由：
+  1. **好改**：换授权码只改一处
+  2. **多环境**：本地和服务器可用不同配置
+  3. **分工清晰**：代码是逻辑，`.env` 是配置
+
+### Q24：`BackgroundScheduler` 和 `BlockingScheduler` 有什么区别？
+
+**我的回答：** BackgroundScheduler 后台运行不影响主线程；BlockingScheduler 是代码唯一要运行时使用的调度器；AsyncIOScheduler 是异步调用用的
+
+**判定：** ✅ 基本正确
+
+### Q25：`CronTrigger(second="*/30")` 是什么意思？
+
+**我的回答：** 没答
+
+**补充：**
+
+- `CronTrigger` 是按 cron 语法触发
+- `second="*/30"` 表示**每 30 秒**
+- `*/n` = 每 n 个单位
+- 常用：`hour=8, minute=0`（每天 8:00）、`minute="*/5"`（每 5 分钟）
+
+### Q26：为什么定时任务里要用 `try/except`？不用会怎样？
+
+**我的回答：** 让函数加入异常处理，避免代码跑崩
+
+**判定：** ✅ 正确
+
+**补充：** 不用的话，异常冒泡到调度器，一次失败整个任务崩，**没有日志**。用了之后：一次失败 + 日志，下次任务照常。
+
+### Q27：`CronTrigger(hour=8, minute=0)` 和 `CronTrigger(second="*/30")` 的区别？
+
+**我的回答：** 是 cron 的语法，一个是每天 8 点 0 分，一个是每 30 秒
+
+**判定：** ✅ 完全正确
+
+---
+
+## 阶段 6：用户 + JWT
+
+### Q28：为什么密码要「哈希」而不是「加密」？
 
 **我的回答：** 哈希更安全，输入不同的明文转换成哈希都能验证成功
 
@@ -584,7 +686,7 @@
 - 为什么用哈希：数据库泄露了攻击者也无法反推
 - 验证方式：不是解密对比，是「**用同样算法再哈希一次，对比两个哈希是否一致**」
 
-### Q24：为什么每次 `hash_password("test123")` 结果都不同，但 `verify_password` 还能验证成功？
+### Q29：为什么每次 `hash_password("test123")` 结果都不同，但 `verify_password` 还能验证成功？
 
 **我的回答：** 因为转换为哈希符合认证答案
 
@@ -596,7 +698,7 @@
 - 验证时：从存储的哈希里**取出 salt**，用同样 salt + 用户输入密码**再算一遍**，对比
 - Salt 作用：**防彩虹表攻击**（没 salt，同样密码永远同样哈希，可被预计算表反查）
 
-### Q25：JWT 的 `SECRET_KEY` 是干嘛用的？泄露会怎样？
+### Q30：JWT 的 `SECRET_KEY` 是干嘛用的？泄露会怎样？
 
 **我的回答：** 用户密码泄露会导致用户资料泄露
 
@@ -608,7 +710,7 @@
 - 验证：重新算一遍签名，对比是否一致 → 一致合法，不一致被篡改
 - **泄露后果**：攻击者能**伪造任意用户的 token**，冒充任何人登录，**比密码泄露更严重**
 
-### Q26：为什么失败时统一返回「用户名或密码错误」？
+### Q31：为什么失败时统一返回「用户名或密码错误」？
 
 **我的回答：** 通用 token 花费更少，代码不必执行多步骤
 
@@ -620,7 +722,7 @@
   - 「用户名不存在」 → 攻击者知道**这个用户名没注册**
   - 「密码错误」 → 攻击者知道**用户名存在，继续猜密码**
 
-### Q27：为什么 `hash_password` 在 `main.py` 调用，不在 `database.py`？
+### Q32：为什么 `hash_password` 在 `main.py` 调用，不在 `database.py`？
 
 **我的回答：** 因为这样符合哈希验证方式，用同样的算法再哈希一次
 
@@ -631,56 +733,6 @@
   - `auth.py`：只做哈希和 JWT
   - `main.py`：组织流程（先哈希，再存库）
 - 如果 `database.py` 内部做哈希：数据库层会依赖认证层，**层次混乱**
-
----
-
-## 阶段 5：定时任务
-
-### Q28：为什么邮件授权码要放 `.env` 而不是写代码里？
-
-**我的回答：** 防止授权码泄露
-
-**纠正：** ⚠️ 对，但不完整。
-
-- 还有三个理由：
-  1. **好改**：换授权码只改一处
-  2. **多环境**：本地和服务器可用不同配置
-  3. **分工清晰**：代码是逻辑，`.env` 是配置
-
-### Q29：`BackgroundScheduler` 和 `BlockingScheduler` 有什么区别？
-
-**我的回答：** BackgroundScheduler 后台运行不影响主线程；BlockingScheduler 是代码唯一要运行时使用的调度器；AsyncIOScheduler 是异步调用用的
-
-**判定：** ✅ 基本正确
-
-### Q30：`CronTrigger(second="*/30")` 是什么意思？
-
-**我的回答：** 没答
-
-**补充：**
-
-- `CronTrigger` 是按 cron 语法触发
-- `second="*/30"` 表示**每 30 秒**
-- `*/n` = 每 n 个单位
-- 常用：`hour=8, minute=0`（每天 8:00）、`minute="*/5"`（每 5 分钟）
-
-### Q31：为什么定时任务里要用 `try/except`？不用会怎样？
-
-**我的回答：** 让函数加入异常处理，避免代码跑崩
-
-**判定：** ✅ 正确
-
-**补充：** 不用的话，异常冒泡到调度器，一次失败整个任务崩，**没有日志**。用了之后：一次失败 + 日志，下次任务照常。
-
-### Q32：`CronTrigger(hour=8, minute=0)` 和 `CronTrigger(second="*/30")` 的区别？
-
-**我的回答：** 是 cron 的语法，一个是每天 8 点 0 分，一个是每 30 秒
-
-**判定：** ✅ 完全正确
-
----
-
-## 阶段 6.3：多用户隔离
 
 ### Q33：为什么每个数据库函数的 `WHERE` 都要加 `user_id = %s`？
 
@@ -703,6 +755,126 @@
 
 ---
 
+## 阶段 6.5：邮箱验证 + 找回密码
+
+### Q35：邮箱验证的完整流程是什么？
+
+**我的回答：** 用户注册 → 后端生成验证码 → 发到邮箱 → 用户输入 → 验证成功
+
+**纠正：** ⚠️ 骨架对，但漏了关键步骤。
+
+- 漏了「**后端存库**」——token 生成后必须先存数据库，才能校验
+- 漏了「**绑定用户**」——token 记录必须带 `user_id`，否则不知道验证谁
+- 完整流程：
+  1. 后端生成随机 token
+  2. **存库**（user_id + token + expires_at）
+  3. 发邮件（链接里带 token）
+  4. 用户点链接
+  5. 后端查库校验（存在/未过期/未用）
+  6. 更新 `users.email_verified = 1`
+  7. 标记 token 已用
+
+### Q36：邮箱验证的 token 为什么不用 JWT？
+
+**我的回答：** 一长串 token 不容易被破解，可以用 JWT，JWT 我不是很熟
+
+**纠正：** ❌ 关键点没答到。
+
+- **「可以用 JWT」不推荐**——JWT 是「无状态」的，服务器不存它
+- 邮箱验证 token 需求：**必须能查、能标记已用、能作废**
+- JWT 做不到「用过一次就失效」（除非维护黑名单，还不如直接用随机 token）
+- **正确做法**：随机字符串（`secrets.token_urlsafe(32)`）+ 存库
+
+### Q37：token 表要有哪些字段？
+
+**我的回答：** id、time
+
+**纠正：** ⚠️ 太少。
+
+- 至少需要：`id`、`user_id`、`token`、`purpose`、`expires_at`、`used_at`、`created_at`
+- `user_id`：**最关键**，绑定用户
+- `purpose`：区分「邮箱验证」还是「找回密码」
+- `expires_at`：过期时间（没有它，token 永久有效，泄露就完蛋）
+- `used_at`：标记已用（一次性 token）
+
+### Q38：`user_id` 为什么用 `INT` 而不是 `VARCHAR`？
+
+**我的回答：** 因为它是与主键强相关的字段，所以要用主键的类型
+
+**判定：** ✅ 完全正确
+
+- 原则：**外键类型必须与引用列类型一致**
+- `users.id` 是 `INT`，所以 `user_id` 也是 `INT`
+
+### Q39：`used_at` 的默认值为什么是 `NULL`？
+
+**我的回答：** 因为 0 和空字符串不符合 SQL 语句
+
+**纠正：** ⚠️ 方向对，理由不准。
+
+- `DATETIME` 列**不接受整数 `0`**（会报错）
+- `NULL` 表示「没有值」——**没用过的时候就是没有值**
+- 语义：`used_at IS NULL` = 没用过；`used_at IS NOT NULL` = 用过了
+- 跟你阶段 4 的 `deadline or None` 是同一个道理：**数据库的「空」用 NULL**
+
+### Q40：`mark_token_used` 里为什么加 `AND used_at IS NULL`？
+
+**我的回答：** 因为初始值为空，如果去掉那会注册失败
+
+**纠正：** ⚠️ 后果说反了。
+
+- 去掉**不会注册失败**，只是**无条件更新**
+- 后果：已经用过的 token 再调用，`used_at` 会被**覆盖成新时间**
+- 加 `AND used_at IS NULL`：**只有「还没用过」的才能标记**
+- 已经用过的，`rowcount = 0`，说明「没标记成功」
+- 跟 `complete_todo` 里的 `AND done = 0` 是**同一个道理**
+
+### Q41：找回密码的 token 有效期该设多久？
+
+**我的回答：** 应该更短，因为保持安全性
+
+**纠正：** ❌ 说反了。
+
+- 邮箱验证：**15 分钟**（用户刚注册，等着验证）
+- 找回密码：**应该更长**（用户可能几小时后才想起来，15 分钟就过期了，体验极差）
+- 行业惯例：**30 分钟 ~ 2 小时**
+- 我们选：**1 小时**
+- **核心**：安全不是越高越好，是在**体验可接受范围内尽量高**
+
+### Q42：`POST /reset-password` 接收什么参数？用什么方式？
+
+**我的回答：** 接收 `email` 参数
+
+**纠正：** ❌ 完全错——把邮箱验证的答案抄过来了。
+
+- 接收**表单字段**：`token`、`new_password`、`confirm_password`
+- 因为 `GET /reset-password` 返回的是**纯 HTML 表单**，浏览器提交 `<form>` 用的是 **`form-data`**，不是 JSON
+- FastAPI 处理表单用 `Form(...)`，**不是 `BaseModel`**
+
+### Q43：`POST /reset-password` 为什么要再检查一遍 token？
+
+**我的回答：** 它们两个检查目标不一样
+
+**纠正：** ⚠️ 没说清楚。
+
+- `GET` 和 `POST` 是**两次独立请求**，中间可能隔几分钟
+- 这期间：token 可能**过期了**、可能**被别人用了**
+- **所以必须重新验证**——不能信任「GET 时验证过了」
+- **安全相关的检查，每次用到 token 都要重新做**
+
+### Q44：`update_email_verified` 为什么不需要加 `AND email_verified = 0`？
+
+**我的回答：** 因为这个不需要有值
+
+**纠正：** ❌ 没答到点上。
+
+- 因为**防重复由上游 `/verify` 接口负责**（检查 token 的 `used_at`）
+- 已经在 `/verify` 里拦住了重复请求，函数本身不用再检查
+- 对比 `complete_todo`：它没有上游守卫，所以自己加 `AND done = 0`
+- **两种方式都对**，看设计
+
+---
+
 ## 🎯 重点复习清单
 
 **你答对的核心概念：**
@@ -715,16 +887,22 @@
 - Cron 语法
 - `try/except` 的作用
 - `InjectedState` 的机制
+- 外键类型必须与主键一致
 
 **需要重看的重点：**
 
-1. **哈希 vs 加密、Salt、JWT 的 `SECRET_KEY`**（Q23~Q25）
+1. **哈希 vs 加密、Salt、JWT 的 `SECRET_KEY`**（Q28~Q30）
 2. **`.invoke({})` 的作用**（Q9）
 3. **`DictCursor` 的用途**（Q1）：取值，不是生成
 4. **数据库层数据隔离**的意义（Q33）
-5. **分层设计**（database / auth / main 的职责）（Q27）
+5. **分层设计**（database / auth / main 的职责）（Q32）
 6. **`@tool` 的元数据机制**（Q7）：LLM 看不到函数体
 7. **`InjectedState` 的语法要求**（Q21）：Python 参数顺序
+8. **随机 token vs JWT 的适用场景**（Q36）
+9. **token 表的完整字段设计**（Q37）
+10. **找回密码的有效期为什么比邮箱验证长**（Q41）
+11. **FastAPI 表单处理：Form vs BaseModel**（Q42）
+12. **安全相关检查每次都要重新做**（Q43）
 
 ---
 
@@ -753,4 +931,20 @@
 
 ### 🎯 明天要做
 -
-```
+
+---
+
+## 使用说明
+
+1. **把这段整个替换掉你 NOTES.md 里原来的「附录：阶段 3~8 问答回顾」部分**
+2. 新附录包含：**阶段 3 / 4 / 5 / 6 / 6.5 全部问答**（44 题）
+3. 更新了**判定统计**（✅12 / ⚠️17 / ❌15）
+4. 更新了**重点复习清单**（加了阶段 6.5 的 5 条）
+
+---
+
+## 替换后
+
+1. **保存 NOTES.md**
+2. **GitHub Desktop 提交**：`docs: 更新 NOTES.md（阶段 6.5 完成 + 完整问答回顾）`
+3. **Commit → Push**

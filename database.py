@@ -14,12 +14,16 @@ DB_CONFIG = {
     "cursorclass": pymysql.cursors.DictCursor,
 }
 
+
 def get_connection():
     return pymysql.connect(**DB_CONFIG)
+
 
 def init_db():
     conn = get_connection()
     c = conn.cursor()
+
+    # todos 表
     c.execute("""
         CREATE TABLE IF NOT EXISTS todos (
             id INT AUTO_INCREMENT PRIMARY KEY,
@@ -31,9 +35,26 @@ def init_db():
             created_at DATETIME DEFAULT CURRENT_TIMESTAMP
         ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
     """)
+
+    # email_verifications 表
+    c.execute("""
+        CREATE TABLE IF NOT EXISTS email_verifications (
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            user_id INT NOT NULL,
+            token VARCHAR(64) NOT NULL,
+            purpose VARCHAR(20) NOT NULL DEFAULT 'email_verify',
+            expires_at DATETIME NOT NULL,
+            used_at DATETIME DEFAULT NULL,
+            created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+            INDEX idx_token (token),
+            INDEX idx_user_id (user_id)
+        ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4
+    """)
+
     conn.commit()
     conn.close()
     print("数据库初始化完成")
+
 
 def add_todo(user_id: int, content: str, deadline: str = None) -> int:
     conn = get_connection()
@@ -116,10 +137,20 @@ def restore_todo(user_id: int, todo_id: int) -> int:
     conn.close()
     return affected
 
+
 def get_user_by_username(username: str):
     conn = get_connection()
     c = conn.cursor()
     c.execute("SELECT id, username, email, password_hash FROM users WHERE username = %s", (username,))
+    row = c.fetchone()
+    conn.close()
+    return row
+
+
+def get_user_by_email(email: str):
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("SELECT id, username, email, password_hash, email_verified FROM users WHERE email = %s", (email,))
     row = c.fetchone()
     conn.close()
     return row
@@ -137,6 +168,7 @@ def create_user(username: str, email: str, password_hash: str) -> int:
     conn.close()
     return new_id
 
+
 def get_all_users() -> list:
     """返回所有用户，包含 id 和 email。"""
     conn = get_connection()
@@ -145,6 +177,69 @@ def get_all_users() -> list:
     rows = c.fetchall()
     conn.close()
     return rows
+
+
+def create_verification_token(user_id: int, token: str, purpose: str, expires_at) -> int:
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute(
+        "INSERT INTO email_verifications (user_id, token, purpose, expires_at) VALUES (%s, %s, %s, %s)",
+        (user_id, token, purpose, expires_at)
+    )
+    conn.commit()
+    new_id = c.lastrowid
+    conn.close()
+    return new_id
+
+
+def get_verification_token(token: str):
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute("SELECT * FROM email_verifications WHERE token = %s", (token,))
+    row = c.fetchone()
+    conn.close()
+    return row
+
+
+def mark_token_used(token_id: int) -> int:
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute(
+        "UPDATE email_verifications SET used_at = NOW() WHERE id = %s AND used_at IS NULL",
+        (token_id,)
+    )
+    conn.commit()
+    affected = c.rowcount
+    conn.close()
+    return affected
+
+def update_user_password(user_id: int, new_password_hash: str) -> int:
+    """更新用户密码，返回受影响行数。"""
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute(
+        "UPDATE users SET password_hash = %s WHERE id = %s",
+        (new_password_hash, user_id)
+    )
+    conn.commit()
+    affected = c.rowcount
+    conn.close()
+    return affected
+
+
+def update_email_verified(user_id: int) -> int:
+    """把用户的 email_verified 设为 1，返回受影响行数。"""
+    conn = get_connection()
+    c = conn.cursor()
+    c.execute(
+        "UPDATE users SET email_verified = 1 WHERE id = %s",
+        (user_id,)
+    )
+    conn.commit()
+    affected = c.rowcount
+    conn.close()
+    return affected
+
 
 if __name__ == "__main__":
     init_db()

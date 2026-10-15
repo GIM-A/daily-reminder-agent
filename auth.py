@@ -1,4 +1,5 @@
 import os
+import secrets
 from datetime import datetime, timedelta
 from pwdlib import PasswordHash
 from jose import jwt, JWTError
@@ -36,6 +37,10 @@ def decode_access_token(token: str) -> int | None:
     except (JWTError, KeyError, ValueError):
         return None
 
+def generate_token(length: int = 32) -> str:
+    """生成随机 token，用于邮箱验证和找回密码。"""
+    return secrets.token_urlsafe(length)
+
 
 if __name__ == "__main__":
     pw = "test123"
@@ -48,3 +53,5 @@ if __name__ == "__main__":
     print("\nToken:", token)
     print("解析:", decode_access_token(token))
     print("解析假 token:", decode_access_token("fake"))
+    print("\n随机 token:", generate_token())
+    print("长度:", len(generate_token()))
