@@ -155,3 +155,10 @@ button.logout {
     font-weight: bold;
     text-decoration: underline;
 }
+button.logout.danger {
+    background: #d33;
+}
+
+button.logout.danger:hover {
+    background: #b02a2a;
+}
