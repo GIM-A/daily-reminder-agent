@@ -10,7 +10,7 @@
     <div class="container">
         <h1>每日提醒 Agent</h1>
 
-        <!-- 登录/注册区域（未登录时显示） -->
+        <!-- 登录/注册区域 -->
         <div id="auth-section">
             <input id="username" type="text" placeholder="用户名" autocomplete="username">
             <input id="password" type="password" placeholder="密码" autocomplete="current-password">
@@ -20,11 +20,24 @@
                 <button id="btn-register">注册</button>
             </div>
             <p id="auth-message"></p>
+            <p style="margin-top: 12px; font-size: 13px;">
+                <a href="#" id="btn-forgot" style="color: #4a90e2;">忘记密码？</a>
+            </p>
         </div>
 
-        <!-- 聊天区域（已登录时显示） -->
+        <!-- 忘记密码区域 -->
+        <div id="forgot-section" style="display: none;">
+            <h2 style="font-size: 18px; margin-bottom: 12px;">找回密码</h2>
+            <input id="forgot-email" type="email" placeholder="请输入注册时的邮箱">
+            <div class="button-group">
+                <button id="btn-send-reset">发送重置邮件</button>
+                <button id="btn-back-login" style="background: #999;">返回登录</button>
+            </div>
+            <p id="forgot-message"></p>
+        </div>
+
+        <!-- 聊天区域 -->
         <div id="chat-section" style="display: none;">
-            <!-- 邮箱未验证提示条（默认隐藏） -->
             <div id="verify-banner" style="display: none;">
                 ⚠️ 您的邮箱未验证，<a href="#" id="btn-send-verify">点此发送验证邮件</a>
             </div>

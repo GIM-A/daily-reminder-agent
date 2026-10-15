@@ -3,6 +3,7 @@ console.log("app.js 已加载");
 // ==================== 元素引用 ====================
 const authSection = document.getElementById("auth-section");
 const chatSection = document.getElementById("chat-section");
+const forgotSection = document.getElementById("forgot-section");
 const usernameInput = document.getElementById("username");
 const passwordInput = document.getElementById("password");
 const emailInput = document.getElementById("email");
@@ -15,6 +16,11 @@ const messagesEl = document.getElementById("messages");
 const authMessage = document.getElementById("auth-message");
 const verifyBanner = document.getElementById("verify-banner");
 const btnSendVerify = document.getElementById("btn-send-verify");
+const btnForgot = document.getElementById("btn-forgot");
+const btnBackLogin = document.getElementById("btn-back-login");
+const btnSendReset = document.getElementById("btn-send-reset");
+const forgotEmail = document.getElementById("forgot-email");
+const forgotMessage = document.getElementById("forgot-message");
 
 // ==================== 工具函数 ====================
 function showAuthMessage(text, type = "") {
@@ -22,23 +28,37 @@ function showAuthMessage(text, type = "") {
     authMessage.className = type;
 }
 
+function showForgotMessage(text, type = "") {
+    forgotMessage.textContent = text;
+    forgotMessage.className = type;
+}
+
 function showChat() {
     authSection.style.display = "none";
+    forgotSection.style.display = "none";
     chatSection.style.display = "block";
     refreshVerifyBanner();
 }
 
 function showAuth() {
     authSection.style.display = "block";
+    forgotSection.style.display = "none";
     chatSection.style.display = "none";
     messagesEl.innerHTML = "";
+}
+
+function showForgot() {
+    authSection.style.display = "none";
+    forgotSection.style.display = "block";
+    chatSection.style.display = "none";
+    forgotEmail.value = "";
+    showForgotMessage("");
 }
 
 function getToken() {
     return localStorage.getItem("token");
 }
 
-// 根据 localStorage 里的 email_verified 决定是否显示提示条
 function refreshVerifyBanner() {
     const verified = localStorage.getItem("email_verified") === "true";
     verifyBanner.style.display = verified ? "none" : "block";
@@ -121,6 +141,43 @@ btnLogout.addEventListener("click", () => {
     showAuthMessage("已退出登录");
 });
 
+// ==================== 忘记密码 ====================
+btnForgot.addEventListener("click", (e) => {
+    e.preventDefault();
+    showForgot();
+});
+
+btnBackLogin.addEventListener("click", () => {
+    showAuth();
+});
+
+btnSendReset.addEventListener("click", async () => {
+    const email = forgotEmail.value.trim();
+    if (!email) {
+        showForgotMessage("请输入邮箱", "error");
+        return;
+    }
+
+    showForgotMessage("发送中...");
+
+    try {
+        const res = await fetch("/forgot-password", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+        });
+        const data = await res.json();
+
+        if (data.error) {
+            showForgotMessage(data.error, "error");
+        } else {
+            showForgotMessage(data.message || "重置邮件已发送，请查收", "success");
+        }
+    } catch (e) {
+        showForgotMessage("网络错误：" + e.message, "error");
+    }
+});
+
 // ==================== 发送验证邮件 ====================
 btnSendVerify.addEventListener("click", async (e) => {
     e.preventDefault();
@@ -196,7 +253,6 @@ btnSend.addEventListener("click", async () => {
     }
 });
 
-// 回车发送
 chatInput.addEventListener("keydown", (e) => {
     if (e.key === "Enter") btnSend.click();
 });

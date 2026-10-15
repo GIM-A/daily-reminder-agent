@@ -119,20 +119,23 @@ button.logout {
 .input-row input {
     margin-bottom: 0;
 }
-
-/* 邮箱未验证提示条 */
-#verify-banner {
-    background: #fff3cd;
-    color: #856404;
-    border: 1px solid #ffeeba;
-    padding: 10px 15px;
-    border-radius: 6px;
+/* 忘记密码区域 */
+#forgot-section h2 {
+    font-size: 18px;
     margin-bottom: 12px;
-    font-size: 14px;
+    color: #333;
 }
 
-#verify-banner a {
-    color: #856404;
-    font-weight: bold;
-    text-decoration: underline;
+#forgot-message {
+    margin-top: 12px;
+    font-size: 13px;
+    color: #666;
+}
+
+#forgot-message.error {
+    color: #d33;
+}
+
+#forgot-message.success {
+    color: #2a9d3f;
 }
