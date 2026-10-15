@@ -141,7 +141,10 @@ def restore_todo(user_id: int, todo_id: int) -> int:
 def get_user_by_username(username: str):
     conn = get_connection()
     c = conn.cursor()
-    c.execute("SELECT id, username, email, password_hash FROM users WHERE username = %s", (username,))
+    c.execute(
+        "SELECT id, username, email, password_hash, email_verified FROM users WHERE username = %s",
+        (username,)
+    )
     row = c.fetchone()
     conn.close()
     return row

@@ -120,3 +120,19 @@ button.logout {
     margin-bottom: 0;
 }
 
+/* 邮箱未验证提示条 */
+#verify-banner {
+    background: #fff3cd;
+    color: #856404;
+    border: 1px solid #ffeeba;
+    padding: 10px 15px;
+    border-radius: 6px;
+    margin-bottom: 12px;
+    font-size: 14px;
+}
+
+#verify-banner a {
+    color: #856404;
+    font-weight: bold;
+    text-decoration: underline;
+}

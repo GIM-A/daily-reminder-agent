@@ -24,6 +24,10 @@
 
         <!-- 聊天区域（已登录时显示） -->
         <div id="chat-section" style="display: none;">
+            <!-- 邮箱未验证提示条（默认隐藏） -->
+            <div id="verify-banner" style="display: none;">
+                ⚠️ 您的邮箱未验证，<a href="#" id="btn-send-verify">点此发送验证邮件</a>
+            </div>
             <div id="messages"></div>
             <div class="input-row">
                 <input id="chat-input" type="text" placeholder="说点什么...">

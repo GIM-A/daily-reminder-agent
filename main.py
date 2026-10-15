@@ -106,8 +106,12 @@ def login(req: LoginRequest):
     if not verify_password(req.password, user["password_hash"]):
         return {"error": "用户名或密码错误"}
     token = create_access_token(user["id"])
-    return {"access_token": token, "token_type": "bearer"}
-
+    return {
+        "access_token": token,
+        "token_type": "bearer",
+        "email": user["email"],
+        "email_verified": bool(user["email_verified"]),
+    }
 
 @app.post("/send-verify-email")
 def send_verify_email_api(req: SendVerifyEmailRequest):
